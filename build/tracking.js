@@ -297,6 +297,10 @@
   }
 }(window));
 
+if (typeof module !== 'undefined') {
+  module.exports = window.tracking;
+}
+
 (function() {
   /**
    * EventEmitter utility.
@@ -989,16 +993,15 @@
    * @static
    */
   tracking.ViolaJones.detect = function(pixels, width, height, initialScale, scaleFactor, stepSize, edgesDensity, data) {
-    //initialScale *= tracking.Scale.scaleFactor;
     var total = 0;
     var rects = [];
-    var integralImage = new Float32Array(width * height);
-    var integralImageSquare = new Float32Array(width * height);
-    var tiltedIntegralImage = new Float32Array(width * height);
+    var integralImage = new Int32Array(width * height);
+    var integralImageSquare = new Int32Array(width * height);
+    var tiltedIntegralImage = new Int32Array(width * height);
 
     var integralImageSobel;
     if (edgesDensity > 0) {
-      integralImageSobel = new Float32Array(width * height);
+      integralImageSobel = new Int32Array(width * height);
     }
 
     tracking.Image.computeIntegralImage(pixels, width, height, integralImage, integralImageSquare, tiltedIntegralImage, integralImageSobel);
@@ -1008,7 +1011,6 @@
     var scale = initialScale * scaleFactor;
     var blockWidth = (scale * minWidth) | 0;
     var blockHeight = (scale * minHeight) | 0;
-    console.log('scale, blockWidth, blockHeight', scale, blockWidth, blockHeight);
 
     while (blockWidth < width && blockHeight < height) {
       var step = (scale * stepSize + 0.5) | 0;
