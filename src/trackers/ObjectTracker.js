@@ -108,6 +108,7 @@
    * @param {number} height The pixels canvas height.
    */
   tracking.ObjectTracker.prototype.track = function(pixels, width, height) {
+    var then = +new Date();
     var self = this;
     var classifiers = this.getClassifiers();
 
@@ -124,6 +125,9 @@
     this.emit('track', {
       data: results
     });
+
+    var now = +new Date();
+    console.log('track', now - then);
   };
 
   /**

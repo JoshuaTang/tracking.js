@@ -230,21 +230,34 @@
    * @param {object} opt_options Optional configuration to the tracker.
    * @private
    */
-  tracking.trackVideo_ = function(element, tracker) {
+  tracking.trackVideo_ = function(element, tracker, opt_options) {
     var canvas = document.createElement('canvas');
     var context = canvas.getContext('2d');
     var width;
     var height;
 
+
+// FIXME here the video display size of the analysed size
     var resizeCanvas_ = function() {
-      width = element.offsetWidth;
-      height = element.offsetHeight;
+      if (opt_options.scaled) {
+        var threshold = opt_options.threshold || 50000;
+        tracking.Scale.adjustScale(element.offsetWidth, element.offsetHeight, threshold);
+      }
+      console.log('old size', element.offsetWidth, element.offsetHeight);
+      width = element.offsetWidth * tracking.Scale.scaleFactor;
+      height = element.offsetHeight * tracking.Scale.scaleFactor;
       canvas.width = width;
       canvas.height = height;
+      console.log('new size', width, height);
     };
     resizeCanvas_();
     element.addEventListener('resize', resizeCanvas_);
 
+
+// FIXME: do a process function - it is up to the caller to handle the frequency of detection
+// it seems all handled in the tracking.TrackerTask..
+// so in short, remove the tracking.TrackerTask from here
+// if the user want to use it, it can create it himself
     var requestId;
     var requestAnimationFrame_ = function() {
       requestId = window.requestAnimationFrame(function() {
@@ -891,6 +904,49 @@
 
 (function() {
   /**
+   * Auto-scaling utility.
+   * @static
+   * @constructor
+   */
+  tracking.Scale = {};
+
+  /**
+   * Holds the scale of original size.
+   * @type {number}
+   * @default 1.0
+   * @static
+   */
+  tracking.Scale.scaleFactor = 1.0;
+
+  /**
+   * Adjusts the scale of original size.
+   * @param {number} width Original canvas's width.
+   * @param {number} height Original canvas's height.
+   * @static
+   */
+  tracking.Scale.adjustScale = function (width, height, threshold) {
+    var ratio = 1 / (Math.sqrt(width * height / threshold));
+    this.scaleFactor = this.normalizeScale(ratio);
+  };
+
+  /**
+   * Normalizes the raw scale to avoid rounding issues.
+   * @param {number} s Raw scale.
+   * @returns {number} Normalized scale.
+   * @static
+   */
+  tracking.Scale.normalizeScale = function (s) {
+    if (s >= 1) {
+      return 1;
+    }
+
+    return Math.round(s * 10) / 10;
+  };
+
+}());
+
+(function() {
+  /**
    * ViolaJones utility.
    * @static
    * @constructor
@@ -933,15 +989,16 @@
    * @static
    */
   tracking.ViolaJones.detect = function(pixels, width, height, initialScale, scaleFactor, stepSize, edgesDensity, data) {
+    //initialScale *= tracking.Scale.scaleFactor;
     var total = 0;
     var rects = [];
-    var integralImage = new Int32Array(width * height);
-    var integralImageSquare = new Int32Array(width * height);
-    var tiltedIntegralImage = new Int32Array(width * height);
+    var integralImage = new Float32Array(width * height);
+    var integralImageSquare = new Float32Array(width * height);
+    var tiltedIntegralImage = new Float32Array(width * height);
 
     var integralImageSobel;
     if (edgesDensity > 0) {
-      integralImageSobel = new Int32Array(width * height);
+      integralImageSobel = new Float32Array(width * height);
     }
 
     tracking.Image.computeIntegralImage(pixels, width, height, integralImage, integralImageSquare, tiltedIntegralImage, integralImageSobel);
@@ -951,6 +1008,7 @@
     var scale = initialScale * scaleFactor;
     var blockWidth = (scale * minWidth) | 0;
     var blockHeight = (scale * minHeight) | 0;
+    console.log('scale, blockWidth, blockHeight', scale, blockWidth, blockHeight);
 
     while (blockWidth < width && blockHeight < height) {
       var step = (scale * stepSize + 0.5) | 0;
@@ -1154,14 +1212,23 @@
     }
 
     var result = [];
+    var scaleFactor = tracking.Scale.scaleFactor;
+    console.log('scaleFactor', scaleFactor);
     Object.keys(map).forEach(function(key) {
       var rect = map[key];
+      console.log({
+        total: rect.total,
+        width: ((rect.width / rect.total + 0.5)) | 0,
+        height: ((rect.height / rect.total + 0.5) ) | 0,
+        x: ((rect.x / rect.total + 0.5) ) | 0,
+        y: ((rect.y / rect.total + 0.5) ) | 0
+      });
       result.push({
         total: rect.total,
-        width: (rect.width / rect.total + 0.5) | 0,
-        height: (rect.height / rect.total + 0.5) | 0,
-        x: (rect.x / rect.total + 0.5) | 0,
-        y: (rect.y / rect.total + 0.5) | 0
+        width: ((rect.width / rect.total + 0.5) / scaleFactor) | 0,
+        height: ((rect.height / rect.total + 0.5) / scaleFactor) | 0,
+        x: ((rect.x / rect.total + 0.5) / scaleFactor) | 0,
+        y: ((rect.y / rect.total + 0.5) / scaleFactor) | 0
       });
     });
 
@@ -2561,6 +2628,7 @@
    * @param {number} height The pixels canvas height.
    */
   tracking.ObjectTracker.prototype.track = function(pixels, width, height) {
+    var then = +new Date();
     var self = this;
     var classifiers = this.getClassifiers();
 
@@ -2577,6 +2645,9 @@
     this.emit('track', {
       data: results
     });
+
+    var now = +new Date();
+    console.log('track', now - then);
   };
 
   /**
@@ -2939,7 +3010,7 @@
         tracking.LBF.maxNumStages
       );
     }
-
+// NOTE: is this thesholding suitable ? if it is on image, why no skin-color filter ? and a adaptative threshold
     pixels = tracking.Image.grayscale(pixels, width, height, false);
 
     pixels = tracking.Image.equalizeHist(pixels, width, height);

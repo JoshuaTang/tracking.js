@@ -263,14 +263,23 @@
     }
 
     var result = [];
+    var scaleFactor = tracking.Scale.scaleFactor;
+    console.log('scaleFactor', scaleFactor);
     Object.keys(map).forEach(function(key) {
       var rect = map[key];
+      console.log({
+        total: rect.total,
+        width: ((rect.width / rect.total + 0.5)) | 0,
+        height: ((rect.height / rect.total + 0.5) ) | 0,
+        x: ((rect.x / rect.total + 0.5) ) | 0,
+        y: ((rect.y / rect.total + 0.5) ) | 0
+      });
       result.push({
         total: rect.total,
-        width: (rect.width / rect.total + 0.5) | 0,
-        height: (rect.height / rect.total + 0.5) | 0,
-        x: (rect.x / rect.total + 0.5) | 0,
-        y: (rect.y / rect.total + 0.5) | 0
+        width: ((rect.width / rect.total + 0.5) / scaleFactor) | 0,
+        height: ((rect.height / rect.total + 0.5) / scaleFactor) | 0,
+        x: ((rect.x / rect.total + 0.5) / scaleFactor) | 0,
+        y: ((rect.y / rect.total + 0.5) / scaleFactor) | 0
       });
     });
 

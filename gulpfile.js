@@ -28,6 +28,7 @@ gulp.task('build', function() {
     'src/utils/Canvas.js',
     'src/utils/DisjointSet.js',
     'src/utils/Image.js',
+    'src/utils/Scale.js',
     'src/detection/ViolaJones.js',
     'src/features/Brief.js',
     'src/features/Fast.js',

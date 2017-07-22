@@ -223,7 +223,7 @@
    * @param {object} opt_options Optional configuration to the tracker.
    * @private
    */
-  tracking.trackVideo_ = function(element, tracker) {
+  tracking.trackVideo_ = function(element, tracker, opt_options) {
     var canvas = document.createElement('canvas');
     var context = canvas.getContext('2d');
     var width;
@@ -232,10 +232,16 @@
 
 // FIXME here the video display size of the analysed size
     var resizeCanvas_ = function() {
-      width = element.offsetWidth;
-      height = element.offsetHeight;
+      if (opt_options.scaled) {
+        var threshold = opt_options.threshold || 50000;
+        tracking.Scale.adjustScale(element.offsetWidth, element.offsetHeight, threshold);
+      }
+      console.log('old size', element.offsetWidth, element.offsetHeight);
+      width = element.offsetWidth * tracking.Scale.scaleFactor;
+      height = element.offsetHeight * tracking.Scale.scaleFactor;
       canvas.width = width;
       canvas.height = height;
+      console.log('new size', width, height);
     };
     resizeCanvas_();
     element.addEventListener('resize', resizeCanvas_);
