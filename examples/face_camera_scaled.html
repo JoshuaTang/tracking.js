@@ -44,7 +44,8 @@
     tracking.track('#video', tracker, {
       camera: true,
       scaled: true,
-      threshold: 50000
+      threshold: 50000,
+      fps: 2
     });
 
     tracker.on('track', function(event) {
